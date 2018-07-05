@@ -1,7 +1,7 @@
 title: Go test
-summary: Runs go test
+summary: Runs Go test
 description: |-
-  Runs go test on the given packages one-by-one:
+  Runs Go test on the given packages one-by-one:
 
   `go test -v <package>`
 
@@ -24,15 +24,20 @@ toolkit:
 inputs:
 - packages: $BITRISE_GO_PACKAGES
   opts:
-    title: go test target packages
-    summary: go test target packages
+    title: Go test target packages
+    summary: List of Go packages to test.
     description: |-
-      Newline (`\n`) separated list of go packages, to run the go test command against.
+      Newline separated list of Go packages, to run the Go test command against.
 
-      Example: `github.com/my/step\ngithub.com/bitrise/step/tool`
+      __Example:__
+
+      ```
+      github.com/my/step
+      github.com/bitrise/step/tool
+      ```
 outputs:
 - GO_CODE_COVERAGE_REPORT_PATH:
   opts:
     title: Code coverage report file path
-    summary: Code coverage report file path
+    summary: Path to the code coverage report file.
     description: Path to the code coverage report file, which contains each package's code coverage report.
