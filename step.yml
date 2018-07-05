@@ -30,3 +30,9 @@ inputs:
       Newline (`\n`) separated list of go packages, to run the go test command against.
 
       Example: `github.com/my/step\ngithub.com/bitrise/step/tool`
+outputs:
+- GO_CODE_COVERAGE_REPORT_PATH:
+  opts:
+    title: Code coverage report file path
+    summary: Code coverage report file path
+    description: Path to the code coverage report file, which contains each package's code coverage report.
