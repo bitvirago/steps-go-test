@@ -23,7 +23,11 @@ func packageCodeCoveragePath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Failed to create tmp dir for code coverage reports: %s", err)
 	}
-	return filepath.Join(tmpDir, "profile.out"), nil
+	pth := filepath.Join(tmpDir, "profile.out")
+	if _, err := os.Create(pth); err != nil {
+		return "", err
+	}
+	return pth, nil
 }
 
 func codeCoveragePath() (string, error) {
