@@ -18,7 +18,7 @@ func failf(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func packageCodeCoveragePath() (string, error) {
+func createPackageCodeCoverageFile() (string, error) {
 	tmpDir, err := pathutil.NormalizedOSTempDirPath("go-test")
 	if err != nil {
 		return "", fmt.Errorf("Failed to create tmp dir for code coverage reports: %s", err)
@@ -44,7 +44,7 @@ func codeCoveragePath() (string, error) {
 func appendPackageCoverageAndRecreate(packageCoveragePth, coveragePth string) error {
 	content, err := fileutil.ReadStringFromFile(packageCoveragePth)
 	if err != nil {
-		return fmt.Errorf("Failed to read package code coverage report: %s", err)
+		return fmt.Errorf("Failed to read package code coverage report file: %s", err)
 	}
 
 	if err := fileutil.AppendStringToFile(coveragePth, content); err != nil {
@@ -52,10 +52,10 @@ func appendPackageCoverageAndRecreate(packageCoveragePth, coveragePth string) er
 	}
 
 	if err := os.RemoveAll(packageCoveragePth); err != nil {
-		return fmt.Errorf("Failed to remove package code coverage report: %s", err)
+		return fmt.Errorf("Failed to remove package code coverage report file: %s", err)
 	}
 	if _, err := os.Create(packageCoveragePth); err != nil {
-		return err
+		return fmt.Errorf("Failed to create package code coverage report file: %s", err)
 	}
 	return nil
 }
@@ -72,7 +72,7 @@ func main() {
 
 	log.Infof("\nRunning go test...")
 
-	packageCodeCoveragePth, err := packageCodeCoveragePath()
+	packageCodeCoveragePth, err := createPackageCodeCoverageFile()
 	if err != nil {
 		failf(err.Error())
 	}
