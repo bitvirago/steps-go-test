@@ -18,12 +18,16 @@ func failf(format string, args ...interface{}) {
 	os.Exit(1)
 }
 
-func packageCodeCoveragePath() (string, error) {
+func createPackageCodeCoverageFile() (string, error) {
 	tmpDir, err := pathutil.NormalizedOSTempDirPath("go-test")
 	if err != nil {
 		return "", fmt.Errorf("Failed to create tmp dir for code coverage reports: %s", err)
 	}
-	return filepath.Join(tmpDir, "profile.out"), nil
+	pth := filepath.Join(tmpDir, "profile.out")
+	if _, err := os.Create(pth); err != nil {
+		return "", err
+	}
+	return pth, nil
 }
 
 func codeCoveragePath() (string, error) {
@@ -37,10 +41,10 @@ func codeCoveragePath() (string, error) {
 	return filepath.Join(deployDir, "go_code_coverage.txt"), nil
 }
 
-func appendPackageCoverageAndDelete(packageCoveragePth, coveragePth string) error {
+func appendPackageCoverageAndRecreate(packageCoveragePth, coveragePth string) error {
 	content, err := fileutil.ReadStringFromFile(packageCoveragePth)
 	if err != nil {
-		return fmt.Errorf("Failed to read package code coverage report: %s", err)
+		return fmt.Errorf("Failed to read package code coverage report file: %s", err)
 	}
 
 	if err := fileutil.AppendStringToFile(coveragePth, content); err != nil {
@@ -48,7 +52,10 @@ func appendPackageCoverageAndDelete(packageCoveragePth, coveragePth string) erro
 	}
 
 	if err := os.RemoveAll(packageCoveragePth); err != nil {
-		return fmt.Errorf("Failed to remove package code coverage report: %s", err)
+		return fmt.Errorf("Failed to remove package code coverage report file: %s", err)
+	}
+	if _, err := os.Create(packageCoveragePth); err != nil {
+		return fmt.Errorf("Failed to create package code coverage report file: %s", err)
 	}
 	return nil
 }
@@ -65,7 +72,7 @@ func main() {
 
 	log.Infof("\nRunning go test...")
 
-	packageCodeCoveragePth, err := packageCodeCoveragePath()
+	packageCodeCoveragePth, err := createPackageCodeCoverageFile()
 	if err != nil {
 		failf(err.Error())
 	}
@@ -84,7 +91,7 @@ func main() {
 			failf("go test failed: %s", err)
 		}
 
-		if err := appendPackageCoverageAndDelete(packageCodeCoveragePth, codeCoveragePth); err != nil {
+		if err := appendPackageCoverageAndRecreate(packageCodeCoveragePth, codeCoveragePth); err != nil {
 			failf(err.Error())
 		}
 	}
