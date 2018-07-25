@@ -41,7 +41,7 @@ func codeCoveragePath() (string, error) {
 	return filepath.Join(deployDir, "go_code_coverage.txt"), nil
 }
 
-func appendPackageCoverageAndDelete(packageCoveragePth, coveragePth string) error {
+func appendPackageCoverageAndRecreate(packageCoveragePth, coveragePth string) error {
 	content, err := fileutil.ReadStringFromFile(packageCoveragePth)
 	if err != nil {
 		return fmt.Errorf("Failed to read package code coverage report: %s", err)
@@ -53,6 +53,9 @@ func appendPackageCoverageAndDelete(packageCoveragePth, coveragePth string) erro
 
 	if err := os.RemoveAll(packageCoveragePth); err != nil {
 		return fmt.Errorf("Failed to remove package code coverage report: %s", err)
+	}
+	if _, err := os.Create(packageCoveragePth); err != nil {
+		return err
 	}
 	return nil
 }
@@ -88,7 +91,7 @@ func main() {
 			failf("go test failed: %s", err)
 		}
 
-		if err := appendPackageCoverageAndDelete(packageCodeCoveragePth, codeCoveragePth); err != nil {
+		if err := appendPackageCoverageAndRecreate(packageCodeCoveragePth, codeCoveragePth); err != nil {
 			failf(err.Error())
 		}
 	}
