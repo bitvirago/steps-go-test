@@ -25,18 +25,23 @@ workflows:
         inputs:
         - content: |-
             #!/usr/bin/env bash
-            echo "code coverage html report: ${GO_CODE_COV_HTML_REPORT_FILE}"
-            if [ ! -f "${GO_CODE_COV_HTML_REPORT_FILE}" ]; then
-              echo "The GO_CODE_COV_HTML_REPORT_FILE file does not exist"
+            echo "code coverage html report: ${GO_CODE_COVERAGE_HTML_REPORT_PATH}"
+            if [ ! -f "${GO_CODE_COVERAGE_HTML_REPORT_PATH}" ]; then
+              echo "The GO_CODE_COVERAGE_HTML_REPORT_PATH file does not exist"
               exit 1
             fi
 
-            echo "code coverage txt report: ${GO_CODE_COV_TXT_REPORT_FILE}"
-            if [ ! -f "${GO_CODE_COV_TXT_REPORT_FILE}" ]; then
-              echo "The GO_CODE_COV_TXT_REPORT_FILE file does not exist"
+            echo "code coverage txt report: ${GO_CODE_COVERAGE_HTML_REPORT_PATH}"
+            if [ ! -f "${GO_CODE_COVERAGE_HTML_REPORT_PATH}" ]; then
+              echo "The GO_CODE_COVERAGE_HTML_REPORT_PATH file does not exist"
               exit 1
             fi
 
+            echo "code coverage junit report: ${GO_CODE_COVERAGE_JUNIT_REPORT_PATH}"
+            if [ ! -f "${GO_CODE_COVERAGE_JUNIT_REPORT_PATH}" ]; then
+              echo "The GO_CODE_COVERAGE_JUNIT_REPORT_PATH file does not exist"
+              exit 1
+            fi
   # ----------------------------------------------------------------
   # --- Utility workflows
   dep-update:

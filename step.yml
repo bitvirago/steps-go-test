@@ -3,9 +3,9 @@ summary: Runs Go test
 description: |-
   Runs Go tests:
 
-  `go test -race -coverprofile="${CODE_COV_TXT_REPORT_FILE}" -covermode=atomic <packages>`
-
-  `go tool cover -html "${CODE_COV_TXT_REPORT_FILE}" -o "${CODE_COV_HTML_REPORT_FILE}"`
+  `go test -race -coverprofile="${GO_CODE_COVERAGE_REPORT_PATH}" -covermode=atomic <packages>`
+  `go tool cover -html "${GO_CODE_COVERAGE_REPORT_PATH}" -o "${GO_CODE_COVERAGE_HTML_REPORT_PATH}"`
+  `cat "${GO_CODE_COVERAGE_REPORT_PATH}" | | go-junit-report > "${GO_CODE_COVERAGE_JUNIT_REPORT_PATH}"`
 
 website: https://github.com/bitrise-steplib/steps-go-test
 source_code_url: https://github.com/bitrise-steplib/steps-go-test
@@ -24,26 +24,31 @@ toolkit:
     package_name: github.com/bitrise-steplib/steps-go-test
 
 inputs:
-- packages: ./...
+- packages: $BITRISE_GO_PACKAGES
   opts:
     title: Go test target packages
     summary: List of Go packages to test.
     description: |-
       Space separated list of Go packages, to run the Go test command against.
 
-      __Example:__
-
       ```
-      github.com/my/step github.com/bitrise/step/tool
+        github.com/my/step
+        github.com/bitrise/step/tool
       ```
 outputs:
-- GO_CODE_COV_HTML_REPORT_FILE:
+- GO_CODE_COVERAGE_HTML_REPORT_PATH:
   opts:
-    title: Code coverage HTML report file
-    summary: Code coverage HTML report file.
+    title: Code coverage HTML report path
+    summary: Code coverage HTML report path.
     description: Code coverage HTML report file, which contains each package's code coverage report.
-- GO_CODE_COV_TXT_REPORT_FILE:
+- GO_CODE_COVERAGE_JUNIT_REPORT_PATH:
   opts:
-    title: Code coverage TXT report file path
-    summary: Code coverage TXT report file.
-    description: Code coverage TXT report file, which contains each package's code coverage report.
+    title: Code coverage JUnit report path
+    summary: Code coverage JUnit report path.
+    description: Code coverage JUnit report file, which contains each package's code coverage report.
+- GO_CODE_COVERAGE_REPORT_PATH:
+  opts:
+    title: Code coverage report file path
+    summary: Code coverage report file path
+    description: Path to the code coverage report file, which contains each package's code coverage report.
+

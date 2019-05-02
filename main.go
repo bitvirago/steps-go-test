@@ -2,100 +2,131 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/bitrise-io/go-utils/command"
-	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-tools/go-steputils/tools"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 )
+
+const tempDir = "go-test-coverage"
 
 func failf(format string, args ...interface{}) {
 	log.Errorf(format, args...)
 	os.Exit(1)
 }
 
-func createPackageCodeCoverageFile() (string, error) {
-	tmpDir, err := pathutil.NormalizedOSTempDirPath("go-test-coverage")
+func installedInPath(name string) bool {
+	cmd := exec.Command("which", name)
+	outBytes, err := cmd.Output()
+	return err == nil && strings.TrimSpace(string(outBytes)) != ""
+}
+
+func getTempDirName() (string, error) {
+	tmpDir, err := pathutil.NormalizedOSTempDirPath(tempDir)
 	if err != nil {
-		return "", fmt.Errorf("Failed to create tmp dir for code coverage reports: %s", err)
+		return "", fmt.Errorf("failed to create tmp dir for code coverage reports: %s", err)
 	}
-	pth := filepath.Join(tmpDir, "coverprofile.out")
+
+	return tmpDir, nil
+}
+
+func createPackageCodeCoverageFile(tmpDir string) (string, error) {
+	pth := filepath.Join(tmpDir, "cover_profile.out")
 	if _, err := os.Create(pth); err != nil {
 		return "", err
 	}
+
 	return pth, nil
 }
 
-func codeCoveragePath() (string, error) {
-	tmpDir, err := pathutil.NormalizedOSTempDirPath("go-test-coverage")
-	if err != nil {
-		return "", fmt.Errorf("Failed to create tmp dir for code coverage reports: %s", err)
+func createCoverage(packageCodeCoveragePth, packages string) {
+	cmd := command.NewWithStandardOuts("go", "test", "-v", "-race", "-coverprofile="+packageCodeCoveragePth, "-covermode=atomic", packages)
+
+	log.Printf("$ %s", cmd.PrintableCommandArgs())
+
+	if err := cmd.Run(); err != nil {
+		failf("go test failed: %s", err)
 	}
-	pth := filepath.Join(tmpDir, "go_code_coverage.txt")
-	if _, err := os.Create(pth); err != nil {
-		return "", err
+
+	if err := tools.ExportEnvironmentWithEnvman("GO_CODE_COVERAGE_REPORT_PATH", packageCodeCoveragePth); err != nil {
+		failf("Failed to export GO_CODE_COVERAGE_REPORT_PATH=%s", packageCodeCoveragePth)
 	}
-	return pth, nil
+
+	log.Donef("\ncode coverage is available at: GO_CODE_COVERAGE_REPORT_PATH=%s", packageCodeCoveragePth)
 }
 
-func appendPackageCoverageAndRecreate(packageCoveragePth, coveragePth string) error {
-	content, err := fileutil.ReadStringFromFile(packageCoveragePth)
-	if err != nil {
-		return fmt.Errorf("Failed to read package code coverage report file: %s", err)
+func createHtmlCoverage(packageCodeCoveragePth, tmpDir string) {
+	htmlTempFile := filepath.Join(tmpDir, "cover_profile.html")
+	cmd := command.NewWithStandardOuts("go", "tool", "cover", "-html="+packageCodeCoveragePth, "-o", htmlTempFile)
+
+	log.Printf("$ %s", cmd.PrintableCommandArgs())
+
+	if err := cmd.Run(); err != nil {
+		failf("go test failed: %s", err)
 	}
 
-	if err := fileutil.AppendStringToFile(coveragePth, content); err != nil {
-		return fmt.Errorf("Failed to append package code coverage report: %s", err)
+	if err := tools.ExportEnvironmentWithEnvman("GO_CODE_COVERAGE_HTML_REPORT_PATH", htmlTempFile); err != nil {
+		failf("Failed to export GO_CODE_COVERAGE_HTML_REPORT_PATH=%s", htmlTempFile)
 	}
 
-	if err := os.RemoveAll(packageCoveragePth); err != nil {
-		return fmt.Errorf("Failed to remove package code coverage report file: %s", err)
+	log.Donef("\ncode coverage is available at: GO_CODE_COVERAGE_HTML_REPORT_PATH=%s", htmlTempFile)
+}
+
+func createJUnitCoverage(packageCodeCoveragePth, tmpDir string) {
+	jUnitFile := filepath.Join(tmpDir, "cover_profile.xml")
+	cmd := command.NewWithStandardOuts("bash", "-c", fmt.Sprintf("cat %s | go-junit-report > %s", packageCodeCoveragePth, jUnitFile))
+
+	log.Printf("$ %s", cmd.PrintableCommandArgs())
+
+	if err := cmd.Run(); err != nil {
+		failf("go test failed: %s", err)
 	}
-	if _, err := os.Create(packageCoveragePth); err != nil {
-		return fmt.Errorf("Failed to create package code coverage report file: %s", err)
+
+	if err := tools.ExportEnvironmentWithEnvman("GO_CODE_COVERAGE_JUNIT_REPORT_PATH", jUnitFile); err != nil {
+		failf("Failed to export GO_CODE_COVERAGE_JUNIT_REPORT_PATH=%s", jUnitFile)
 	}
-	return nil
+
+	log.Donef("\ncode coverage is available at: GO_CODE_COVERAGE_JUNIT_REPORT_PATH=%s", jUnitFile)
 }
 
 func main() {
+	packages := os.Getenv("packages")
+
+	log.Infof("Configs:")
+	log.Printf("- packages: %s", packages)
+
+	if packages == "" {
+		failf("Required input not defined: packages")
+	}
+
+	if !installedInPath("go-junit-report") {
+		cmd := command.New("go", "get", "-u", "github.com/jstemmer/go-junit-report")
+
+		log.Infof("\nInstalling go-junit-report")
+		log.Donef("$ %s", cmd.PrintableCommandArgs())
+
+		if out, err := cmd.RunAndReturnTrimmedCombinedOutput(); err != nil {
+			failf("failed to install go-junit-report: %s", out)
+		}
+	}
+
 	log.Infof("\nRunning go test...")
 
-	packageCodeCoveragePth, err := createPackageCodeCoverageFile()
+	tmpDir, err := getTempDirName()
+	if err != nil {
+		failf("failed to create temp dir")
+	}
+
+	packageCodeCoveragePth, err := createPackageCodeCoverageFile(tmpDir)
 	if err != nil {
 		failf(err.Error())
 	}
 
-	codeCoveragePth, err := codeCoveragePath()
-	if err != nil {
-		failf(err.Error())
-	}
-
-	cmd := command.NewWithStandardOuts("go", "test", "-v", "-race", "-coverprofile="+packageCodeCoveragePth, "-covermode=atomic", "./...")
-
-	log.Printf("$ %s", cmd.PrintableCommandArgs())
-
-	if err := cmd.Run(); err != nil {
-		failf("go test failed: %s", err)
-	}
-
-	cmd := command.NewWithStandardOuts("go", "tool", "cover", "-html", packageCodeCoveragePth, "-o", "go_code_coverage.html")
-
-	log.Printf("$ %s", cmd.PrintableCommandArgs())
-
-	if err := cmd.Run(); err != nil {
-		failf("go test failed: %s", err)
-	}
-
-	if err := appendPackageCoverageAndRecreate(packageCodeCoveragePth, codeCoveragePth); err != nil {
-		failf(err.Error())
-	}
-
-	if err := tools.ExportEnvironmentWithEnvman("GO_CODE_COVERAGE_REPORT_PATH", codeCoveragePth); err != nil {
-		failf("Failed to export GO_CODE_COVERAGE_REPORT_PATH=%s", codeCoveragePth)
-	}
-
-	log.Donef("\ncode coverage is available at: GO_CODE_COVERAGE_REPORT_PATH=%s", codeCoveragePth)
+	createCoverage(packageCodeCoveragePth, packages)
+	createHtmlCoverage(packageCodeCoveragePth, tmpDir)
+	createJUnitCoverage(packageCodeCoveragePth, tmpDir)
 }
