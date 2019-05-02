@@ -60,7 +60,7 @@ func createCoverage(packageCodeCoveragePth, packages string) {
 		fmt.Sprintf("go test -v -race -coverprofile=%s -covermode=atomic %s | tee %s",
 			packageCodeCoveragePth,
 			packages,
-			deployDir+"output.log",
+			filepath.Join(deployDir, "output.log"),
 		),
 	)
 	log.Printf("$ %s", cmd.PrintableCommandArgs())
@@ -105,7 +105,7 @@ func createJUnitCoverage(packageCodeCoveragePth string) {
 	}
 
 	jUnitFile := filepath.Join(deployDir, "cover_profile.xml")
-	cmd := command.NewWithStandardOuts("bash", "-c", fmt.Sprintf("cat %s | go-junit-report > %s", packageCodeCoveragePth+"output.log", jUnitFile))
+	cmd := command.NewWithStandardOuts("bash", "-c", fmt.Sprintf("cat %s | go-junit-report > %s", filepath.Join(deployDir, "output.log"), jUnitFile))
 
 	log.Printf("$ %s", cmd.PrintableCommandArgs())
 
