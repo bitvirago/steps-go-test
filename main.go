@@ -98,7 +98,7 @@ func createHtmlCoverage(packageCodeCoveragePth string) {
 	log.Donef("\ncode coverage is available at: GO_CODE_COVERAGE_HTML_REPORT_PATH=%s", htmlTempFile)
 }
 
-func createJUnitCoverage(packageCodeCoveragePth string) {
+func createJUnitCoverage() {
 	deployDir, err := getDeployDir()
 	if err != nil {
 		failf("cannot create deploy dir", err)
@@ -150,5 +150,5 @@ func main() {
 
 	createCoverage(packageCodeCoveragePth, packages)
 	createHtmlCoverage(packageCodeCoveragePth)
-	createJUnitCoverage(packageCodeCoveragePth)
+	createJUnitCoverage()
 }
