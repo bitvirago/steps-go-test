@@ -24,7 +24,7 @@ toolkit:
     package_name: github.com/bitrise-steplib/steps-go-test
 
 inputs:
-- packages: $BITRISE_GO_PACKAGES
+- packages: ./...
   opts:
     title: Go test target packages
     summary: List of Go packages to test.
