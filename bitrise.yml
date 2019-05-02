@@ -4,17 +4,13 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 app:
   envs:
   # If you want to share this step into a StepLib
-  - BITRISE_STEP_VERSION: "1.0.2"
+  - BITRISE_STEP_VERSION: "2.0.0"
 
 workflows:
   test:
     before_run:
     - audit-this-step
     steps:
-    - go-list:
-    - golint:
-    - errcheck:
-    - go-test:
     - change-workdir:
         title: Switch working dir to ./_tmp dir
         inputs:
@@ -29,9 +25,15 @@ workflows:
         inputs:
         - content: |-
             #!/usr/bin/env bash
-            echo "code coverage report: ${GO_CODE_COVERAGE_REPORT_PATH}"
-            if [ ! -f "${GO_CODE_COVERAGE_REPORT_PATH}" ]; then
-              echo "The file at GO_CODE_COVERAGE_REPORT_PATH does not exist"
+            echo "code coverage html report: ${GO_CODE_COV_HTML_REPORT_FILE}"
+            if [ ! -f "${GO_CODE_COV_HTML_REPORT_FILE}" ]; then
+              echo "The GO_CODE_COV_HTML_REPORT_FILE file does not exist"
+              exit 1
+            fi
+
+            echo "code coverage txt report: ${GO_CODE_COV_TXT_REPORT_FILE}"
+            if [ ! -f "${GO_CODE_COV_TXT_REPORT_FILE}" ]; then
+              echo "The GO_CODE_COV_TXT_REPORT_FILE file does not exist"
               exit 1
             fi
 

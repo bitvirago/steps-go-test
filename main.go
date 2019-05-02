@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/fileutil"
@@ -19,11 +18,11 @@ func failf(format string, args ...interface{}) {
 }
 
 func createPackageCodeCoverageFile() (string, error) {
-	tmpDir, err := pathutil.NormalizedOSTempDirPath("go-test")
+	tmpDir, err := pathutil.NormalizedOSTempDirPath("go-test-coverage")
 	if err != nil {
 		return "", fmt.Errorf("Failed to create tmp dir for code coverage reports: %s", err)
 	}
-	pth := filepath.Join(tmpDir, "profile.out")
+	pth := filepath.Join(tmpDir, "coverprofile.out")
 	if _, err := os.Create(pth); err != nil {
 		return "", err
 	}
@@ -31,14 +30,15 @@ func createPackageCodeCoverageFile() (string, error) {
 }
 
 func codeCoveragePath() (string, error) {
-	deployDir := os.Getenv("BITRISE_DEPLOY_DIR")
-	if deployDir == "" {
-		return "", fmt.Errorf("BITRISE_DEPLOY_DIR env not set")
+	tmpDir, err := pathutil.NormalizedOSTempDirPath("go-test-coverage")
+	if err != nil {
+		return "", fmt.Errorf("Failed to create tmp dir for code coverage reports: %s", err)
 	}
-	if err := os.MkdirAll(deployDir, 0777); err != nil {
-		return "", fmt.Errorf("Failed to create BITRISE_DEPLOY_DIR: %s", err)
+	pth := filepath.Join(tmpDir, "go_code_coverage.txt")
+	if _, err := os.Create(pth); err != nil {
+		return "", err
 	}
-	return filepath.Join(deployDir, "go_code_coverage.txt"), nil
+	return pth, nil
 }
 
 func appendPackageCoverageAndRecreate(packageCoveragePth, coveragePth string) error {
@@ -61,15 +61,6 @@ func appendPackageCoverageAndRecreate(packageCoveragePth, coveragePth string) er
 }
 
 func main() {
-	packages := os.Getenv("packages")
-
-	log.Infof("Configs:")
-	log.Printf("- packages: %s", packages)
-
-	if packages == "" {
-		failf("Required input not defined: packages")
-	}
-
 	log.Infof("\nRunning go test...")
 
 	packageCodeCoveragePth, err := createPackageCodeCoverageFile()
@@ -82,18 +73,24 @@ func main() {
 		failf(err.Error())
 	}
 
-	for _, p := range strings.Split(packages, "\n") {
-		cmd := command.NewWithStandardOuts("go", "test", "-v", "-race", "-coverprofile="+packageCodeCoveragePth, "-covermode=atomic", p)
+	cmd := command.NewWithStandardOuts("go", "test", "-v", "-race", "-coverprofile="+packageCodeCoveragePth, "-covermode=atomic", "./...")
 
-		log.Printf("$ %s", cmd.PrintableCommandArgs())
+	log.Printf("$ %s", cmd.PrintableCommandArgs())
 
-		if err := cmd.Run(); err != nil {
-			failf("go test failed: %s", err)
-		}
+	if err := cmd.Run(); err != nil {
+		failf("go test failed: %s", err)
+	}
 
-		if err := appendPackageCoverageAndRecreate(packageCodeCoveragePth, codeCoveragePth); err != nil {
-			failf(err.Error())
-		}
+	cmd := command.NewWithStandardOuts("go", "tool", "cover", "-html", packageCodeCoveragePth, "-o", "go_code_coverage.html")
+
+	log.Printf("$ %s", cmd.PrintableCommandArgs())
+
+	if err := cmd.Run(); err != nil {
+		failf("go test failed: %s", err)
+	}
+
+	if err := appendPackageCoverageAndRecreate(packageCodeCoveragePth, codeCoveragePth); err != nil {
+		failf(err.Error())
 	}
 
 	if err := tools.ExportEnvironmentWithEnvman("GO_CODE_COVERAGE_REPORT_PATH", codeCoveragePth); err != nil {
