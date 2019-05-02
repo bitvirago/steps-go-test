@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-tools/go-steputils/tools"
 	"os"
 	"os/exec"
@@ -25,17 +24,25 @@ func installedInPath(name string) bool {
 	return err == nil && strings.TrimSpace(string(outBytes)) != ""
 }
 
-func getTempDirName() (string, error) {
-	tmpDir, err := pathutil.NormalizedOSTempDirPath(tempDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to create tmp dir for code coverage reports: %s", err)
+func getDeployDir() (string, error) {
+	deployDir := os.Getenv("BITRISE_DEPLOY_DIR")
+	if deployDir == "" {
+		return "", fmt.Errorf("BITRISE_DEPLOY_DIR env not set")
+	}
+	if err := os.MkdirAll(deployDir, 0777); err != nil {
+		return "", fmt.Errorf("failed to create BITRISE_DEPLOY_DIR: %s", err)
 	}
 
-	return tmpDir, nil
+	return deployDir, nil
 }
 
-func createPackageCodeCoverageFile(tmpDir string) (string, error) {
-	pth := filepath.Join(tmpDir, "cover_profile.out")
+func createPackageCodeCoverageFile() (string, error) {
+	deployDir, err := getDeployDir()
+	if err != nil {
+		return "", err
+	}
+
+	pth := filepath.Join(deployDir, "cover_profile.out")
 	if _, err := os.Create(pth); err != nil {
 		return "", err
 	}
@@ -59,8 +66,13 @@ func createCoverage(packageCodeCoveragePth, packages string) {
 	log.Donef("\ncode coverage is available at: GO_CODE_COVERAGE_REPORT_PATH=%s", packageCodeCoveragePth)
 }
 
-func createHtmlCoverage(packageCodeCoveragePth, tmpDir string) {
-	htmlTempFile := filepath.Join(tmpDir, "cover_profile.html")
+func createHtmlCoverage(packageCodeCoveragePth string) {
+	deployDir, err := getDeployDir()
+	if err != nil {
+		failf("cannot create deploy dir", err)
+	}
+
+	htmlTempFile := filepath.Join(deployDir, "cover_profile.html")
 	cmd := command.NewWithStandardOuts("go", "tool", "cover", "-html="+packageCodeCoveragePth, "-o", htmlTempFile)
 
 	log.Printf("$ %s", cmd.PrintableCommandArgs())
@@ -76,8 +88,13 @@ func createHtmlCoverage(packageCodeCoveragePth, tmpDir string) {
 	log.Donef("\ncode coverage is available at: GO_CODE_COVERAGE_HTML_REPORT_PATH=%s", htmlTempFile)
 }
 
-func createJUnitCoverage(packageCodeCoveragePth, tmpDir string) {
-	jUnitFile := filepath.Join(tmpDir, "cover_profile.xml")
+func createJUnitCoverage(packageCodeCoveragePth string) {
+	deployDir, err := getDeployDir()
+	if err != nil {
+		failf("cannot create deploy dir", err)
+	}
+
+	jUnitFile := filepath.Join(deployDir, "cover_profile.xml")
 	cmd := command.NewWithStandardOuts("bash", "-c", fmt.Sprintf("cat %s | go-junit-report > %s", packageCodeCoveragePth, jUnitFile))
 
 	log.Printf("$ %s", cmd.PrintableCommandArgs())
@@ -116,17 +133,12 @@ func main() {
 
 	log.Infof("\nRunning go test...")
 
-	tmpDir, err := getTempDirName()
-	if err != nil {
-		failf("failed to create temp dir")
-	}
-
-	packageCodeCoveragePth, err := createPackageCodeCoverageFile(tmpDir)
+	packageCodeCoveragePth, err := createPackageCodeCoverageFile()
 	if err != nil {
 		failf(err.Error())
 	}
 
 	createCoverage(packageCodeCoveragePth, packages)
-	createHtmlCoverage(packageCodeCoveragePth, tmpDir)
-	createJUnitCoverage(packageCodeCoveragePth, tmpDir)
+	createHtmlCoverage(packageCodeCoveragePth)
+	createJUnitCoverage(packageCodeCoveragePth)
 }
