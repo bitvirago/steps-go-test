@@ -11,8 +11,6 @@ import (
 	"strings"
 )
 
-const tempDir = "go-test-coverage"
-
 func failf(format string, args ...interface{}) {
 	log.Errorf(format, args...)
 	os.Exit(1)
