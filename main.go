@@ -51,11 +51,16 @@ func createPackageCodeCoverageFile() (string, error) {
 }
 
 func createCoverage(packageCodeCoveragePth, packages string) {
+	deployDir, err := getDeployDir()
+	if err != nil {
+		failf("cannot create deploy dir", err)
+	}
+
 	cmd := command.NewWithStandardOuts("bash", "-c",
 		fmt.Sprintf("go test -v -race -coverprofile=%s -covermode=atomic %s | tee %s",
 			packageCodeCoveragePth,
 			packages,
-			packageCodeCoveragePth+"output.log",
+			deployDir+"output.log",
 		),
 	)
 	log.Printf("$ %s", cmd.PrintableCommandArgs())
