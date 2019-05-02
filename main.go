@@ -51,10 +51,13 @@ func createPackageCodeCoverageFile() (string, error) {
 }
 
 func createCoverage(packageCodeCoveragePth, packages string) {
-	cmd := command.NewWithStandardOuts("go", "test", "-v", "-race",
-		"-coverprofile="+packageCodeCoveragePth, "-covermode=atomic", packages,
-		"|", "tee "+packageCodeCoveragePth+"output.log")
-
+	cmd := command.NewWithStandardOuts("bash", "-c",
+		fmt.Sprintf("go test -v -race -coverprofile=%s -covermode=atomic %s | tee %s",
+			packageCodeCoveragePth,
+			packages,
+			packageCodeCoveragePth+"output.log",
+		),
+	)
 	log.Printf("$ %s", cmd.PrintableCommandArgs())
 
 	if err := cmd.Run(); err != nil {
