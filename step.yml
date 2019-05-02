@@ -1,9 +1,11 @@
 title: Go test
 summary: Runs Go test
 description: |-
-  Runs Go test on the given packages one-by-one:
+  Runs Go tests:
 
-  `go test -v <package>`
+  `go test -race -coverprofile="${GO_CODE_COVERAGE_REPORT_PATH}" -covermode=atomic <packages>`
+  `go tool cover -html "${GO_CODE_COVERAGE_REPORT_PATH}" -o "${GO_CODE_COVERAGE_HTML_REPORT_PATH}"`
+  `cat "${GO_CODE_COVERAGE_REPORT_PATH}" | | go-junit-report > "${GO_CODE_COVERAGE_JUNIT_REPORT_PATH}"`
 
 website: https://github.com/bitrise-steplib/steps-go-test
 source_code_url: https://github.com/bitrise-steplib/steps-go-test
@@ -11,7 +13,7 @@ support_url: https://github.com/bitrise-steplib/steps-go-test/issues
 
 type_tags:
   - test
-  
+
 is_requires_admin_user: true
 is_always_run: false
 is_skippable: false
@@ -27,17 +29,26 @@ inputs:
     title: Go test target packages
     summary: List of Go packages to test.
     description: |-
-      Newline separated list of Go packages, to run the Go test command against.
-
-      __Example:__
+      Space separated list of Go packages, to run the Go test command against.
 
       ```
-      github.com/my/step
-      github.com/bitrise/step/tool
+        github.com/my/step
+        github.com/bitrise/step/tool
       ```
 outputs:
+- GO_CODE_COVERAGE_HTML_REPORT_PATH:
+  opts:
+    title: Code coverage HTML report path
+    summary: Code coverage HTML report path.
+    description: Code coverage HTML report file, which contains each package's code coverage report.
+- GO_CODE_COVERAGE_JUNIT_REPORT_PATH:
+  opts:
+    title: Code coverage JUnit report path
+    summary: Code coverage JUnit report path.
+    description: Code coverage JUnit report file, which contains each package's code coverage report.
 - GO_CODE_COVERAGE_REPORT_PATH:
   opts:
     title: Code coverage report file path
-    summary: Path to the code coverage report file.
+    summary: Code coverage report file path
     description: Path to the code coverage report file, which contains each package's code coverage report.
+
